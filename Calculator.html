@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIP Calculator with Withdrawal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(to right, #e0f7fa, #80deea);
+            padding: 20px;
+        }
+
+        .calculator {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            transition: transform 0.3s;
+        }
+
+        .calculator:hover {
+            transform: scale(1.02);
+        }
+
+        .calculator h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #2c3e50;
+            font-size: 30px;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: bold;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 18px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: #2980b9;
+            outline: none;
+        }
+
+        button {
+            background-color: #2980b9;
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            margin-top: 12px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a5276;
+            transform: translateY(-2px);
+        }
+
+        #result {
+            margin-top: 25px;
+            text-align: left;
+            font-weight: bold;
+            color: #34495e;
+            background-color: #ecf0f1;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        #mathTable {
+            margin-top: 25px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #mathTable th, #mathTable td {
+            border: 1px solid #bdc3c7;
+            padding: 12px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s;
+        }
+
+        #mathTable th {
+            background-color: #2980b9;
+            color: white;
+        }
+
+        #mathTable tr:hover {
+            background-color: #d5dbdb;
+        }
+
+        #chartContainer {
+            margin-top: 25px;
+            width: 100%;
+            height: 400px; /* Increased height for better visibility */
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="calculator">
+        <h2>SIP Calculator with Withdrawal</h2>
+        <div class="input-group">
+            <label for="monthlyInvestment">Monthly Investment (₹):</label>
+            <input type="number" id="monthlyInvestment" value="10000" min="0" step="100">
+        </div>
+        <div class="input-group">
+            <label for="interestRate">Expected Annual Return (%):</label>
+            <input type="number" id="interestRate" value="12" min="0" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="investmentPeriod">Investment Period (Years):</label>
+            <input type="number" id="investmentPeriod" value="20" min="1" step="1">
+        </div>
+        <div class="input-group">
+            <label for="withdrawalAmount">Monthly Withdrawal Amount including Miscellaneous as of Today (₹):</label>
+            <input type="number" id="withdrawalAmount" value="20000" min="0" step="100">
+        </div>
+        <button onclick="calculateSIP()">Calculate</button>
+        <div id="result"></div>
+        <table id="mathTable">
+            <thead>
+                <tr>
+                    <th>No. of Year</th>
+                    <th>No. of Month</th>
+                    <th>That Month Investment (₹)</th>
+                    <th>Total Invested till that Month (₹)</th>
+                    <th>Year End Overall Value (₹)</th>
+                    <th>Withdraw Amount (₹)</th>
+                    <th>Value After Withdrawal (₹)</th>
+                    <th>Tax Calculated Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody id="mathTableBody"></tbody>
+        </table>
+        <div id="chartContainer">
+            <canvas id="wealthChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function calculateSIP() {
+            const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value);
+            const annualInterestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+            const investmentPeriod = parseFloat(document.getElementById('investmentPeriod').value);
+            let withdrawalAmount = parseFloat(document.getElementById('withdrawalAmount').value);
+
+            const monthlyInterestRate = annualInterestRate / 12;
+            const totalMonths = investmentPeriod * 12;
+            const targetWealthGained = withdrawalAmount * 500; // 500 times of withdrawal amount entered
+            let futureValue = 0;
+            let totalInvestment = 0;
+            let taxRate = 0.20; // 20% tax
+            const mathTableBody = document.getElementById('mathTableBody');
+            mathTableBody.innerHTML = ''; // Clear previous results
+
+            for (let month = 0; month < totalMonths; month++) {
+                futureValue += monthlyInvestment * Math.pow(1 + monthlyInterestRate, month); // Corrected to month for proper future value calculation
+                totalInvestment += monthlyInvestment;
+
+                let year = Math.floor(month / 12) + 1;
+                let monthInYear = month % 12 + 1;
+
+                let withdrawAmountThisMonth = 0;
+                let valueAfterWithdrawal = futureValue;
+                let taxCalculatedAmount = 0;
+
+                if (futureValue >= targetWealthGained) {
+                    withdrawAmountThisMonth = withdrawalAmount;
+                    taxCalculatedAmount = (withdrawAmountThisMonth * taxRate);
+                    valueAfterWithdrawal = futureValue - withdrawAmountThisMonth - taxCalculatedAmount;
+                }
+
+                // Add data to table
+                const row = `<tr>
+                    <td>${year}</td>
+                    <td>${monthInYear}</td>
+                    <td>${monthlyInvestment.toFixed(2)}</td>
+                    <td>${totalInvestment.toFixed(2)}</td>
+                    <td>${futureValue.toFixed(2)}</td>
+                    <td>${withdrawAmountThisMonth.toFixed(2)}</td>
+                    <td>${valueAfterWithdrawal.toFixed(2)}</td>
+                    <td>${taxCalculatedAmount.toFixed(2)}</td>
+                </tr>`;
+                mathTableBody.innerHTML += row;
+
+                // Increase withdrawal amount by 7% each year
+                if (month % 12 === 11) { // End of year
+                    withdrawalAmount *= 1.07; // Increase by 7%
+                }
+            }
+
+            document.getElementById('result').innerHTML = `
+                Total Investment: ₹${totalInvestment.toFixed(2)}<br>
+                Future Value: ₹${futureValue.toFixed(2)}<br>
+            `;
+
+            // Create chart
+            const ctx = document.getElementById('wealthChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: totalMonths}, (_, i) => i + 1),
+                    datasets: [
+                        {
+                            label: 'Future Value (₹)',
+                            data: Array.from({length: totalMonths}, (_, i) => {
+                                return monthlyInvestment * (Math.pow(1 + monthlyInterestRate, i) - 1) / monthlyInterestRate;
+                            }),
+                            borderColor: '#2980b9',
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                        },
+                        {
+                            label: 'Total Investment (₹)',
+                            data: Array.from({length: totalMonths}, (_, i) => (i + 1) * monthlyInvestment),
+                            borderColor: '#27ae60',
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Months'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Amount (₹)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
